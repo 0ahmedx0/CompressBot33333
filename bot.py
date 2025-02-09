@@ -128,7 +128,7 @@ def compression_choice(client, callback_query):
         video_data['timer'].cancel() # Cancel the timer if user chose quality in time
         print(f"Timer cancelled for message ID: {message_id}")
 
-    user_video_data.pop(message_id) # Now pop data as user made a choice
+    # user_video_data.pop(message_id) # **Removed this line to keep buttons** - Do not POP for quality selection
 
     file = video_data['file']
     message = video_data['message']
