@@ -38,8 +38,9 @@ def auto_select_medium_quality(button_message_id):
         except Exception as e:
             print(f"Error auto-selecting medium quality: {e}")
         finally:
-            if button_message_id in user_video_data:
-                del user_video_data[button_message_id] # Clean up data after auto-selection
+            pass # Removed data cleanup from here - Keep data for re-compression
+            #if button_message_id in user_video_data:
+            #    del user_video_data[button_message_id] # Clean up data after auto-selection
 
 
 @app.on_message(filters.command("start"))
@@ -48,6 +49,7 @@ def start(client, message):
 
 @app.on_message(filters.video | filters.animation)
 def handle_video(client, message):
+    user_video_data.clear() # Clear old data when new video is received
     file = client.download_media(
         message.video.file_id if message.video else message.animation.file_id,
         progress=download_progress
@@ -111,7 +113,7 @@ def compression_choice(client, callback_query):
         return
 
     if callback_query.data == "cancel_compression":
-        video_data = user_video_data.pop(message_id)
+        video_data = user_video_data.pop(message_id) # pop for cancel - keep this
         file = video_data['file']
         try:
             os.remove(file)
@@ -122,13 +124,13 @@ def compression_choice(client, callback_query):
         return # Stop processing further
 
 
-    video_data = user_video_data[message_id] # Do not pop yet, handle timer cancel first
+    video_data = user_video_data[message_id] # Do not pop for quality selection - keep this
 
     if video_data['timer'].is_alive():
         video_data['timer'].cancel() # Cancel the timer if user chose quality in time
         print(f"Timer cancelled for message ID: {message_id}")
 
-    # user_video_data.pop(message_id) # **Removed this line to keep buttons** - Do not POP for quality selection
+    # user_video_data.pop(message_id) # Removed pop from here - Keep data for re-compression
 
     file = video_data['file']
     message = video_data['message']
