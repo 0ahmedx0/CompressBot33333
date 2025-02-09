@@ -1,9 +1,11 @@
 import os
 import tempfile
 import subprocess
+import threading
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import *
+import time
 
 def progress(current, total, message_type="User"): # Added message_type for clarity
     if total > 0:
@@ -21,6 +23,24 @@ def download_progress(current, total):
 app = Client("bot", api_id=API_ID, api_hash=API_HASH, bot_token=API_TOKEN)
 
 user_video_data = {}
+
+def auto_select_medium_quality(button_message_id):
+    if button_message_id in user_video_data:
+        client = app  # Access the client from the outer scope
+        try:
+            client.answer_callback_query(
+                callback_query_id=user_video_data[button_message_id]['callback_query_id'], # Dummy callback_query_id
+                text="تم اختيار الجودة المتوسطة تلقائيًا.",
+                show_alert=False
+            )
+            compression_choice(client, user_video_data[button_message_id]['dummy_callback_query']) # Call compression_choice with dummy callback
+            print(f"Auto-selected medium quality for message ID: {button_message_id}")
+        except Exception as e:
+            print(f"Error auto-selecting medium quality: {e}")
+        finally:
+            if button_message_id in user_video_data:
+                del user_video_data[button_message_id] # Clean up data after auto-selection
+
 
 @app.on_message(filters.command("start"))
 def start(client, message):
@@ -57,7 +77,29 @@ def handle_video(client, message):
         ]
     )
     reply_message = message.reply_text("اختر مستوى الجوده :", reply_markup=markup, quote=True)
-    user_video_data[reply_message.id] = {'file': file, 'message': message, 'button_message_id': reply_message.id} # Store button message id
+    button_message_id = reply_message.id
+
+    # Create a dummy CallbackQuery object for auto-selection
+    class DummyCallbackQuery:
+        def __init__(self, message, data):
+            self.message = message
+            self.data = data
+        def answer(self, text, show_alert):
+            print(f"DummyCallbackQuery Answer: {text}, show_alert={show_alert}") # Optional logging
+
+    dummy_callback_query = DummyCallbackQuery(reply_message, "crf_23")
+
+
+    user_video_data[button_message_id] = {
+        'file': file,
+        'message': message,
+        'button_message_id': button_message_id,
+        'timer': threading.Timer(30, auto_select_medium_quality, args=[button_message_id]),
+        'dummy_callback_query': dummy_callback_query,
+        'callback_query_id': "dummy_callback_id" # Dummy ID - not actually used for answering in auto-selection
+    } # Store button message id and timer
+
+    user_video_data[button_message_id]['timer'].start() # Start the timer
 
 
 @app.on_callback_query()
@@ -79,7 +121,15 @@ def compression_choice(client, callback_query):
         callback_query.answer("تم إلغاء الضغط وحذف الفيديو.",show_alert=False)
         return # Stop processing further
 
-    video_data = user_video_data[message_id] # Do not pop, keep data for re-compression
+
+    video_data = user_video_data[message_id] # Do not pop yet, handle timer cancel first
+
+    if video_data['timer'].is_alive():
+        video_data['timer'].cancel() # Cancel the timer if user chose quality in time
+        print(f"Timer cancelled for message ID: {message_id}")
+
+    user_video_data.pop(message_id) # Now pop data as user made a choice
+
     file = video_data['file']
     message = video_data['message']
     # No button removal or message deletion here, buttons are kept
