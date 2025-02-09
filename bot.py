@@ -29,7 +29,7 @@ def auto_select_medium_quality(button_message_id):
         client = app  # Access the client from the outer scope
         try:
             client.answer_callback_query(
-                callback_query_id=user_video_data[button_message_id]['callback_query_id'], # Dummy callback_query_id
+                callback_query_id=None, # Pass None instead of dummy string ID
                 text="تم اختيار الجودة المتوسطة تلقائيًا.",
                 show_alert=False
             )
@@ -96,7 +96,7 @@ def handle_video(client, message):
         'button_message_id': button_message_id,
         'timer': threading.Timer(30, auto_select_medium_quality, args=[button_message_id]),
         'dummy_callback_query': dummy_callback_query,
-        'callback_query_id': "dummy_callback_id" # Dummy ID - not actually used for answering in auto-selection
+        #'callback_query_id': "dummy_callback_id" # Dummy ID - Not needed anymore, removed this line
     } # Store button message id and timer
 
     user_video_data[button_message_id]['timer'].start() # Start the timer
