@@ -28,11 +28,11 @@ def auto_select_medium_quality(button_message_id):
     if button_message_id in user_video_data:
         client = app  # Access the client from the outer scope
         try:
-            client.answer_callback_query(
-                callback_query_id=None, # Pass None instead of dummy string ID
-                text="تم اختيار الجودة المتوسطة تلقائيًا.",
-                show_alert=False
-            )
+            #client.answer_callback_query( # Removed client.answer_callback_query as it's causing errors
+            #    callback_query_id=None, # Pass None instead of dummy string ID
+            #    text="تم اختيار الجودة المتوسطة تلقائيًا.",
+            #    show_alert=False
+            #) # Removed this line causing error
             compression_choice(client, user_video_data[button_message_id]['dummy_callback_query']) # Call compression_choice with dummy callback
             print(f"Auto-selected medium quality for message ID: {button_message_id}")
         except Exception as e:
